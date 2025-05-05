@@ -25,10 +25,14 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _ColorEnd: 0
+    - _ColorStart: 0
     - _Offset: 0
     - _Scale: 1
     - _Value: 1
     m_Colors:
     - _Color: {r: 1, g: 0, b: 0, a: 1}
+    - _ColorA: {r: 0.64465404, g: 0.9867408, b: 1, a: 1}
+    - _ColorB: {r: 0, g: 0.120085955, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

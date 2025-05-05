@@ -13,15 +13,25 @@ Shader "Unlit/UnlitShader1"
     }
     SubShader // render pipeline related
     {
-        Tags { "RenderType"="Opaque" } // for sorting
+        Tags { "RenderType"="Transparent" 
+               "Queue" = "Transparent" } 
 
         Pass // graphics related for specific pass
         {
+            Cull Off
+
+            ZWrite Off
+            ZTest LEqual
+            Blend One One // additive
+            //Blend DstColor Zero // multiply
+
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+
+            #define TAU 6.283185307179586476925286766559 // 2 * PI
 
             float4 _ColorA;
             float4 _ColorB;
@@ -30,20 +40,21 @@ Shader "Unlit/UnlitShader1"
             float _ColorEnd;
 
             // automatically filled out by Unity
-            struct MeshData // originally appdata, per-vertex data
+            struct MeshData // originally appdata, per-vertex data (input into vertex shader)
             {
                 float4 vertex : POSITION; // vertex position
                 float3 normals : NORMAL; // float3 for a 3D vector
                     // float4 tangent : TANGENT; // float4 for sin data
                     // float4 color : COLOR; // float4 for RGBA
                 float2 uv0 : TEXCOORD0; // uv0 coordinates (diffuse/normal map textures) (can be float4 for procedural)
+                float2 uv1 : TEXCOORD1; // uv1 coordinates lightmap coords
             };
 
             struct v2f // vertex to fragment (used to pass data to fragment shader)) 
             {
                 // in here, TEXCOORD is just an index 
 
-                float4 vertex : SV_POSITION; // vertex position in clip space
+                float4 vertex : SV_POSITION; // set vertex position in clip space (always required)
                 float3 normal : TEXCOORD0; // normal vector (3D vector)
                 float2 uv : TEXCOORD1;
             };
@@ -65,16 +76,29 @@ Shader "Unlit/UnlitShader1"
 
             float4 frag (v2f i) : SV_Target
             {
-                // saturate is just clamp
-                float t = saturate( InverseLerp(_ColorStart, _ColorEnd, i.uv.x) ); // lerp between two values (0 to 1)
-                
-                //t = frac(t); // wrap t between 0 and 1)
+                //float col = saturate( InverseLerp(_ColorStart, _ColorEnd, i.uv.y) ); // lerp between two values (0 to 1) // saturate is just clamp
+                //float t = abs(frac(i.uv.x * 5) * 2 - 1); // Triangle Wave
 
-                float4 outColor = lerp(_ColorA, _ColorB, t); // lerp between two colors based on x coordinate)
+                // return float4(i.normal, 0);
 
-                return outColor;
+                //return i.uv.y; // return the y coordinate of the uv (0 to 1)
 
-                //return outColor;
+                float wiggle = sin(_Time.y * 1.5) * 0.5 + 0.5; // wiggle between 0 and 1;
+
+                float xOffset = cos((i.uv.x + wiggle * 0.05) * TAU * 6) * 0.02;
+                float t = cos((i.uv.y + xOffset - _Time.y * 0.1) * TAU * 4) * 0.5 + 0.5; // this is done in uv space 
+                t *= 1 - i.uv.y; // (the top of the gradient returns as black/transparent because i.uv.y is being subtracted from 1, otherwise the direction would be flipped)
+
+                float topBottomRemover = t * (abs(i.normal.y) < 0.999); // if surface normal is pointing almost entirely up and down, don't render)
+                float waves = t * topBottomRemover ;
+
+                float4 gradient = lerp(_ColorA, _ColorB, i.uv.y);
+
+                return gradient * waves; 
+
+                // float4 outColor = lerp(_ColorA, _ColorB, t); // lerp between two colors based on x coordinate)
+
+                // return outColor;
             }
             ENDCG
         }
@@ -96,5 +120,4 @@ Shader "Unlit/UnlitShader1"
 
             /// use float until you need to optimize
             /// </summary>
-
 }
